@@ -4,13 +4,16 @@
 with
 activity_log_with_exit_flag as (
     select *,
-           case when row_number() over(partition by session order by stamp desc) =1 then 1 else 0 end as is_exit -- 출구 페이지 판정
+           case
+            when row_number() over(partition by session order by stamp desc) = 1 then 1
+            else 0
+           end as is_exit -- 출구 페이지 판정
     from activity_log
 )
 select path,
-       sum(is_exit) as exit_count,
-       count(1) as page_view,
-       avg(100.0*is_exit) as exit_ratio
+       sum(is_exit) as exit_count, -- 출구 수
+       count(1) as page_view, -- 페이지 뷰
+       avg(100.0*is_exit) as exit_ratio -- 이탈률
 from activity_log_with_exit_flag
 group by path;
 
