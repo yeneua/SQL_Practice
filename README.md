@@ -1,1 +1,1 @@
-# SQL-Bigquery
+# SQL-Practice

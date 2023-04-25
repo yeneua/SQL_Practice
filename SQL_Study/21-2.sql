@@ -35,21 +35,21 @@ group by dt;
 -- 재검색 키워드를 집계하는 쿼리
 with
 access_log_with_next_search as (
-select stamp,
-	   session,
-	   action,
-	   keyword,
-	   result_num,
-	   lead(action) over(partition by session order by stamp asc) as next_action,
-	   lead(keyword) over(partition by session order by stamp asc) as next_keyword,
-	   lead(result_num) over(partition by session order by stamp asc) as next_result_num
-from access_log
+		select stamp,
+		session,
+		action,
+		keyword,
+		result_num,
+		lead(action) over(partition by session order by stamp asc) as next_action, -- 이후 액션
+		lead(keyword) over(partition by session order by stamp asc) as next_keyword, -- 이후 키워드
+		lead(result_num) over(partition by session order by stamp asc) as next_result_num -- 이후 검색 수
+	from access_log
 )
 select keyword,
 	   result_num,
-	   count(1) as retry_count,
-	   next_keyword,
-	   next_result_num
+	   count(1) as retry_count, -- 다시 검색한 개수
+	   next_keyword, -- 이후 키워드
+	   next_result_num -- 이후 검색 수
 from access_log_with_next_search
-where action = 'search' and next_action = 'search'
-group by keyword, result_num, next_keyword, next_result_num;
+where action = 'search' and next_action = 'search' -- 재검색인 경우
+group by keyword, result_num, next_keyword, next_result_num; -- '검색&재검색'을 하나의 그룹으로
