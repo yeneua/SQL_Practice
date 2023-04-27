@@ -14,3 +14,27 @@ search_result_with_correct_items as (
 select *
 from search_result_with_correct_items
 order by keyword, rank;
+
+
+-- 검색 결과 상위 n개의 재현율을 계산하는 쿼리
+with
+search_result_with_correct_items as (
+	select coalesce(r.keyword, c.keyword) as keyword,
+		   r.rank,
+	  	   coalesce(r.item, c.item) as item,
+		   case when c.item is not null then 1 else 0 end as correct
+	from search_result as r
+		full outer join correct_result as c
+		on r.keyword = c.keyword and r.item = c.item 
+)
+, search_result_with_recall as (
+	select *,
+		   sum(correct) over(partition by keyword order by coalesce(rank, 10000) asc rows between unbounded preceding and current row) as cum_correct,
+		   case when rank is null then 0.0
+		   else 100.0 * sum(correct) over(partition by keyword order by coalesce(rank, 10000) asc rows between unbounded preceding and current row) / sum(correct) over(partition by keyword)
+		   end as recall
+	from search_result_with_correct_items
+)
+select *
+from search_result_with_recall
+order by keyword, rank;
