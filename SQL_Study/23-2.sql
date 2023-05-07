@@ -15,7 +15,6 @@ from ratings
 order by user_id, score desc;
 
 
-
 -- 아이템 사이의 유사도를 계산하고 순위를 생성하는 쿼리
 with
 ratings as (
@@ -37,3 +36,23 @@ from ratings as r1
 where r1.product <> r2.product -- 같은 아이템의 경우 페어 제외
 group by r1.product, r2.product
 order by target, rank;
+
+
+-- 아이템 벡터를 L2 정규화하는 쿼리
+with
+ratings as (
+    select user_id, product,
+           sum(case when action = 'view' then 1 else 0 end) as view_count,
+           sum(case when action ='purchase' then 1 else 0 end) as purchase_count,
+           0.3 * sum(case when action = 'view' then 1 else 0 end) + 0.7 * sum(case when action = 'purchase' then 1 else 0 end) as score
+    from action_log
+    group by user_id, product
+),
+product_base_normalized_rating as (
+    select user_id, product, score,
+           sqrt(sum(score * score) over(partition by product)) as norm,
+           score / sqrt(sum(score * score) over(partition by product)) as norm_score
+    from ratings
+)
+select *
+from product_base_normalized_rating;
